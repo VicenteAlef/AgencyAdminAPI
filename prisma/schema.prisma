@@ -1,0 +1,128 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// ------------------------------------------------------
+// ENUMS
+// ------------------------------------------------------
+
+enum Role {
+  ADMIN
+  USER
+}
+
+// ------------------------------------------------------
+// MODELS
+// ------------------------------------------------------
+
+model User {
+  id           String    @id @default(uuid())
+  name         String
+  email        String    @unique
+  password     String
+  role         Role      @default(USER)
+  profilePhoto String?   // Opcional, URL da imagem max 400x400
+  isOnline     Boolean   @default(false)
+  isActive     Boolean   @default(true)
+  
+  // Timestamps e Soft Delete
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  // Relacionamentos
+  verificationCode VerificationCode?
+}
+
+model VerificationCode {
+  id        String   @id @default(uuid())
+  code      String   @db.VarChar(6)
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Maker {
+  id        String    @id @default(uuid())
+  name      String    @unique // Ex: "Volkswagen", "Honda"
+  
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  // Relacionamentos
+  vehicles  Vehicle[]
+}
+
+model Vehicle {
+  id          String    @id @default(uuid())
+  title       String
+  model       String    // Ex: "Gol 1.0 MPI", "Civic EXL"
+  year        Int
+  price       Decimal   @db.Decimal(10, 2)
+  mileage     Int       // Quilometragem (km)
+  description String    @db.Text // Texto em Markdown
+  coverPhoto  String    // URL da foto 4x3
+  isSold      Boolean   @default(false)
+  isActive    Boolean   @default(true)
+
+  // Chaves Estrangeiras
+  makerId     String
+  maker       Maker     @relation(fields: [makerId], references: [id])
+
+  // Timestamps e Soft Delete
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  // Relacionamentos
+  photos      VehiclePhoto[]
+  leads       Lead[]
+}
+
+model VehiclePhoto {
+  id        String   @id @default(uuid())
+  url       String
+  vehicleId String
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+}
+
+model Lead {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  phone     String
+  message   String   @db.Text
+  isRead    Boolean  @default(false) // Para o admin saber se já foi respondido no painel
+
+  // Relacionamento opcional com o veículo (caso o contacto venha da página do carro)
+  vehicleId String?
+  vehicle   Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+}
+
+// Nova tabela para configurações exclusivas do Administrador
+model AgencySettings {
+  id           String   @id @default(uuid())
+  contactEmail String   // E-mail da agência para onde vão os leads
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}

@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+*.log
+
+prisma/migrations/
+!prisma/schema.prisma
+!prisma/seed.ts
